@@ -5,6 +5,7 @@
 
 import struct
 import binascii
+from pprint import pprint
 
 # deault size of innodb page
 g_page_size = 16384
@@ -42,7 +43,7 @@ class PageTrailer:
     def __init__(self, byte_page):
         self.old_checksum = struct.unpack(">I", byte_page[16376:16380])[0]
         self.lsn32        = struct.unpack(">I", byte_page[16380:16384])[0]
-    
+        
 # Page
 # attribute
 #     byte_page
@@ -66,12 +67,43 @@ def read_pages(file_path):
     f.close()
     return byte_pages
 
+def pages(byte_pages):
+    pages = []
+    for byte_page in byte_pages:
+        pages.append(Page(byte_page))
+    return pages
+
+
+def space_page_type_regions(pages):
+    if len(pages) == 1:
+        return []
+    regions = []
+    n = len(pages)
+    start = 0
+    for x in range(1, n + 1):
+        if x == n or pages[x].header.page_type != pages[x - 1].header.page_type:
+            region = {
+                "start" : start,
+                "end"   : x - 1,
+                "count" : x - start,
+                "type"  : pages[x - 1].header.page_type
+                }
+            regions.append(region)
+            start = x
+    return regions
+
+def format_space_page_type_regions(regions):
+    print "start\tend\tcount\ttype"
+    for region in regions:
+        print "%d\t%d\t%d\t%s" % (region["start"], region["end"],
+                                  region["count"], region["type"])
+    
 if __name__ == "__main__":
     byte_pages = read_pages("/home/jianchuan.gys/code/innodb/t.ibd")
-    
-    for i in range(10):
-        print vars(Page(byte_pages[i]).header)
-    for i in range(10):
-        print vars(Page(byte_pages[i]).trailer)
+    regions = space_page_type_regions(pages(byte_pages))
+    format_space_page_type_regions(regions)
+
+
+
 
 
