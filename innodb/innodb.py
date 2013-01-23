@@ -74,6 +74,8 @@ def pages(byte_pages):
     return pages
 
 
+# order unique pages depend by page type
+# like [index, index, allocated, index] -> [index, allocated, index]
 def space_page_type_regions(pages):
     if len(pages) == 1:
         return []
