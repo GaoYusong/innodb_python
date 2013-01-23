@@ -9,16 +9,39 @@ import binascii
 # deault size of innodb page
 g_page_size = 16384
 
+# page_type is defined by innodb source fil0fil.h
+# next code is from innodb_ruby author by Jeremy Cole (https://github.com/jeremycole)
+g_page_type = {
+    0     : 'ALLOCATED',      # Freshly allocated page
+    2     : 'UNDO_LOG',       # Undo log page
+    3     : 'INODE',          # Index node
+    4     : 'IBUF_FREE_LIST', # Insert buffer free list
+    5     : 'IBUF_BITMAP',    # Insert buffer bitmap
+    6     : 'SYS',            # System page
+    7     : 'TRX_SYS',        # Transaction system data
+    8     : 'FSP_HDR',        # File space header
+    9     : 'XDES',           # Extent descriptor page
+    10    : 'BLOB',           # Uncompressed BLOB page
+    11    : 'ZBLOB',          # First compressed BLOB page
+    12    : 'ZBLOB2',         # Subsequent compressed BLOB page
+    17855 : 'INDEX',          # B-tree node
+    }
+
 class PageHeader:
     def __init__(self, byte_page):
-        self.checksum = "0x" + binascii.hexlify(byte_page[0:4])
-        self.offset = struct.unpack('>i', byte_page[4:8])[0]
-        self.previous = struct.unpack('>i', byte_page[8:12])[0]
-        self.next = struct.unpack('>i', byte_page[12:16])[0]
+        self.checksum  = struct.unpack('>I', byte_page[0:4])[0]
+        self.offset    = struct.unpack('>I', byte_page[4:8])[0]
+        self.previous  = struct.unpack('>I', byte_page[8:12])[0]
+        self.next      = struct.unpack('>I', byte_page[12:16])[0]
+        self.lsn64     = struct.unpack('>Q', byte_page[16:24])[0]
+        self.page_type = g_page_type[struct.unpack('>H', byte_page[24:26])[0]]
+        self.flush_lsn = struct.unpack('>Q', byte_page[26:34])[0]
+        self.space_id  = struct.unpack('>I', byte_page[34:38])[0]
 
 class PageTrailer:
     def __init__(self, byte_page):
-        pass
+        self.old_checksum = struct.unpack(">I", byte_page[16376:16380])[0]
+        self.lsn32        = struct.unpack(">I", byte_page[16380:16384])[0]
     
 # Page
 # attribute
@@ -45,8 +68,10 @@ def read_pages(file_path):
 
 if __name__ == "__main__":
     byte_pages = read_pages("/home/jianchuan.gys/code/innodb/t.ibd")
-    for i in range(20):
+    
+    for i in range(10):
         print vars(Page(byte_pages[i]).header)
-
+    for i in range(10):
+        print vars(Page(byte_pages[i]).trailer)
 
 
